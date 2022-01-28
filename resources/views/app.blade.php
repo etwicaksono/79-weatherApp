@@ -73,8 +73,8 @@
           <div class="card-header bg-main">
             <div class="row">
               <div class="col">
-                <p class="text-white m-0 p-0" style="font-size: 2rem"><span class="font-weight-bold"
-                    id="location">-</span> As of <span id="time">-</span></p>
+                <p class="text-white m-0 p-0" style="font-size: 2rem"><span class="font-weight-bold location">-</span>
+                  As of <span class="time">-</span></p>
               </div>
             </div>
           </div>
@@ -85,6 +85,13 @@
             <h6 class="card-subtitle mb-2 text-white" id="condition">-</h6>
           </div>
         </div>
+      </div>
+    </div>
+    <p class="mt-5"><span class="h1">3 Days Weather</span> - <span class="location">-</span></p>
+    <p>as of <span class="time">-</span></p>
+    <div class="row">
+      <div class="col">
+        <table class="table" id="forecast-wrapper"></table>
       </div>
     </div>
   </div>
@@ -148,17 +155,19 @@
                 console.log("longi = "+longi);
 
                 $.ajax({
-                  url:"http://api.weatherapi.com/v1/current.json",
+                  url:"http://api.weatherapi.com/v1/forecast.json",
                   method:"get",
                   dataType:"json",
                   data:{
                     key:weather_key,
-                    q:lati+","+longi
+                    q:lati+","+longi,
+                    days:3,
+                    hour:new Date().getHours()
                   },error:function(err){console.log(err);},
                   success:function(res){
                     console.log(res);
-                    let location = $("#location")
-                    let time = $("#time")
+                    let location = $(".location")
+                    let time = $(".time")
                     let temperature = $("#temperature")
                     let icon = $("#weather-icon")
                     let condition = $("#condition")
@@ -168,6 +177,19 @@
                     temperature.html(res.current.temp_c)
                     icon.attr("src",res.current.condition.icon)
                     condition.html(res.current.condition.text)
+
+                    let output = ``
+                    $.each(res.forecast.forecastday,function(key,value){
+                      let date = new Date(value.date).toLocaleDateString("id-ID",{weekday:"long",year:"numeric",month:"long",day:"numeric"})
+                      output += `
+                      <tr>
+                        <td class="align-middle">`+date+`</td>
+                        <td class="align-middle"><img src="`+value.hour[0].condition.icon+`" alt="weather"><span>`+value.hour[0].condition.text+`</span></td>
+                        <td class="align-middle">`+value.hour[0].temp_c+`&deg;C</td>
+                      </tr>
+                      `
+                    })
+                    $("#forecast-wrapper").html(output)
                   }
                 })
               }
