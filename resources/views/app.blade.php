@@ -146,11 +146,14 @@
                 }
             })
 
+            getLocation()
+
             
-            navigator.geolocation.getCurrentPosition(
+            function getLocation(latitude="",longitude=""){
+              navigator.geolocation.getCurrentPosition(
               (position) => {
-                let lati= position.coords.latitude
-                let longi= position.coords.longitude
+                let lati= (latitude!=""?latitude:position.coords.latitude)
+                let longi= (longitude!=""?longitude:position.coords.longitude)
                 console.log("lati = "+lati);
                 console.log("longi = "+longi);
 
@@ -194,6 +197,7 @@
                 })
               }
             );
+            }
         })
   </script>
   <script src="https://maps.googleapis.com/maps/api/js?key={{ getenv('GOOGLE_API_KEY') }}" async></script>
