@@ -17,6 +17,7 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
     integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
 
+  <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
   <style>
     .bg-main {
       background-color: #baaeae;
@@ -60,8 +61,10 @@
         </li> --}}
       </ul>
       <form class="form-inline my-2 my-lg-0">
-        <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search">
-        <button class="btn btn-outline-light my-2 my-sm-0" type="submit">Search</button>
+        {{-- <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search"> --}}
+        <select class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search"
+          id="search"></select>
+        {{-- <button class="btn btn-outline-light my-2 my-sm-0" type="submit">Search</button> --}}
       </form>
     </div>
   </nav>
@@ -106,6 +109,7 @@
   </script>
   <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://kit.fontawesome.com/0f853fcb5c.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
   <script>
     $(function(){
@@ -144,6 +148,43 @@
                         icon: 'warning',
                         })
                 }
+            })
+
+            $("#search").select2({
+              width:"20rem",
+              allowClear: true,
+              minimumInputLength: 2,
+              ajax: {
+                url: "http://api.weatherapi.com/v1/search.json",
+                dataType: 'json',
+                data:function(params){
+                  let query={
+                    key:weather_key,
+                    q:params.term
+                  }
+                  return query
+                },
+                processResults:function(data){
+                  console.log(data);
+
+                  let results = []; 
+                  $.each(data, function (index, value) {
+                      results.push({
+                          id: value.lat+","+value.lon,
+                          text: value.name+", "+value.region+", "+value.country
+                      });
+                  });
+
+                  return {
+                    "results":results
+                  };        
+                },
+                delay: 500,
+              }
+            }).on("select2:select",function(e){
+              // console.log(e);
+              let latlong = e.params.data.id.split(",")
+              getLocation(latlong[0],latlong[1])
             })
 
             getLocation()
