@@ -11,9 +11,6 @@
   <meta name="csrf-token" content="{{ csrf_token() }}" />
   @endif
 
-  {{--
-  <link rel="stylesheet" href="{{ url("../vendor/twbs/bootstrap/dist/css/bootstrap.min.css") }}"> --}}
-
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css"
     integrity="sha384-TX8t27EcRE3e/ihU7zmQxVncDAy5uIKz4rEkgIXeMed4M0jlfIDPvg6uqKI2xXr2" crossorigin="anonymous">
 
@@ -61,10 +58,7 @@
         </li> --}}
       </ul>
       <form class="form-inline my-2 my-lg-0">
-        {{-- <input class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search"> --}}
-        <select class="form-control mr-sm-2" type="search" placeholder="Search" aria-label="Search"
-          id="search"></select>
-        {{-- <button class="btn btn-outline-light my-2 my-sm-0" type="submit">Search</button> --}}
+        <input id="pac-input" class="controls form-control w-100" type="text" placeholder="Search City" />
       </form>
     </div>
   </nav>
@@ -93,7 +87,7 @@
 
     <div class="row mt-3">
       <div class="col">
-        <div id="petaku" style="width:100%; height:50vh"></div>
+        <div id="map" style="width:100%; height:50vh"></div>
       </div>
     </div>
     <p class="mt-5"><span class="h1">3 Days Weather</span> - <span class="location">-</span></p>
@@ -105,9 +99,6 @@
     </div>
   </div>
 
-  {{-- <script src="{{ url("../vendor/components/jquery/jquery.min.js") }}"></script>
-  <script src="{{ url("../vendor/twbs/bootstrap/dist/js/bootstrap.min.js") }}"></script> --}}
-
   <script src="https://code.jquery.com/jquery-3.6.0.min.js">
   </script>
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.bundle.min.js"
@@ -116,57 +107,20 @@
   <script src="//cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   <script src="https://kit.fontawesome.com/0f853fcb5c.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+  <script src="https://maps.googleapis.com/maps/api/js?key={{ getenv('GOOGLE_API_KEY') }}&libraries=places&v=weekly"
+    async></script>
 
   <script>
     $(function(){
             let baseurl = "{{ url('') }}/"
             let weather_key = "{{ getenv('WEATHER_API_KEY') }}"
-            let map
-            let marker
-            let oldMarker
-
-            $("#search").select2({
-              width:"20rem",
-              allowClear: true,
-              minimumInputLength: 2,
-              ajax: {
-                url: "http://api.weatherapi.com/v1/search.json",
-                dataType: 'json',
-                data:function(params){
-                  let query={
-                    key:weather_key,
-                    q:params.term
-                  }
-                  return query
-                },
-                processResults:function(data){
-                  console.log(data);
-
-                  let results = []; 
-                  $.each(data, function (index, value) {
-                      results.push({
-                          id: value.lat+","+value.lon,
-                          text: value.name+", "+value.region+", "+value.country
-                      });
-                  });
-
-                  return {
-                    "results":results
-                  };        
-                },
-                delay: 500,
-              }
-            }).on("select2:select",function(e){
-              // console.log(e);
-              let latlong = e.params.data.id.split(",")
-              getLocation(latlong[0],latlong[1])
-              addMarker(latlong[0],latlong[1])
-              map.setCenter(marker.getPosition())
-            })
-          
+            let map,marker,oldMarker
 
             
-            function getLocation(latitude="",longitude=""){
+            mapsInit()
+            getLocation()         
+
+            function getLocation(latitude="",longitude="",placeName=""){
               navigator.geolocation.getCurrentPosition(
               (position) => {
                 let lati= (latitude!=""?latitude:position.coords.latitude)
@@ -192,7 +146,11 @@
                     let icon = $("#weather-icon")
                     let condition = $("#condition")
 
-                    location.html(res.location.name+", "+res.location.region+", "+res.location.country)
+                    if(placeName==""){
+                      location.html(res.location.name+", "+res.location.region+", "+res.location.country)
+                    }else{
+                      location.html(placeName)
+                    }
                     time.html(res.location.localtime.split(" ")[1])
                     temperature.html(res.current.temp_c)
                     icon.attr("src",res.current.condition.icon)
@@ -214,8 +172,7 @@
                 })
               }
             );
-            }
-            getLocation()  
+            } 
 
             function mapsInit() {
               navigator.geolocation.getCurrentPosition(
@@ -228,42 +185,83 @@
                     center: center,
                     mapTypeId: google.maps.MapTypeId.ROADMAP,
                 };
-                map = new google.maps.Map(document.getElementById("petaku"), petaoption);
-                addMarker(lati,longi, baseurl + "assets/maps-marker.png");
-
+                map = new google.maps.Map(document.getElementById("map"), petaoption);
+                addMarker(lati,longi)
                 google.maps.event.addListener(map, 'click', function(event) {
                     addMarker(event.latLng.lat(),event.latLng.lng());
                 });
-              })                
-            }
-            mapsInit()
-
-            function addMarker(lati,longi, img = baseurl + "assets/maps-marker.png") {
-            if(oldMarker){
-              oldMarker.setMap(null)
+              })  
+            initAutocomplete()              
             }
 
-            let icon = {
-                url: img, // url
-                scaledSize: new google.maps.Size(50, 50), // scaled size
-                origin: new google.maps.Point(0, 0), // origin
-                anchor: new google.maps.Point(30, 60), // anchor
-            };
+            function addMarker(lati,longi, placeName ="") {
+              if(oldMarker){
+                oldMarker.setMap(null)
+              }
 
-            marker = new google.maps.Marker({
-                position: new google.maps.LatLng(lati, longi),
-                map: map,
-                icon: icon,
-                draggable:true
-            });
+              let icon = {
+                  url:  baseurl + "assets/maps-marker.png", // url
+                  scaledSize: new google.maps.Size(50, 50), // scaled size
+                  origin: new google.maps.Point(0, 0), // origin
+                  anchor: new google.maps.Point(30, 60), // anchor
+              };
 
-            oldMarker = marker
-            getLocation(lati,longi)
+              marker = new google.maps.Marker({
+                  position: new google.maps.LatLng(lati, longi),
+                  map: map,
+                  icon: icon,
+                  draggable:true
+              });
+
+              oldMarker = marker
+              getLocation(lati,longi,placeName)
             }
+
+            function initAutocomplete() {
+              // Create the search box and link it to the UI element.
+              const input = document.getElementById("pac-input");
+              const searchBox = new google.maps.places.SearchBox(input);
+
+              let markers = [];
+
+              // Listen for the event fired when the user selects a prediction and retrieve
+              // more details for that place.
+              searchBox.addListener("places_changed", () => {
+                const places = searchBox.getPlaces();
+
+                if (places.length == 0) {
+                  return;
+                }
+
+                // Clear out the old markers.
+                markers.forEach((marker) => {
+                  marker.setMap(null);
+                });
+                markers = [];
+
+                // For each place, get the icon, name and location.
+                const bounds = new google.maps.LatLngBounds();
+
+                places.forEach((place) => {
+                  if (!place.geometry || !place.geometry.location) {
+                    console.log("Returned place contains no geometry");
+                    return;
+                  }
+
+                  addMarker(place.geometry.location.lat(),place.geometry.location.lng(),place.formatted_address)
+                  if (place.geometry.viewport) {
+                    // Only geocodes have viewport.
+                    bounds.union(place.geometry.viewport);
+                  } else {
+                    bounds.extend(place.geometry.location);
+                  }
+                });
+                map.fitBounds(bounds);
+              });
+            }
+
         })
   </script>
-  <script src="https://maps.googleapis.com/maps/api/js?key={{ getenv('GOOGLE_API_KEY') }}" async></script>
-
 
 </body>
 
