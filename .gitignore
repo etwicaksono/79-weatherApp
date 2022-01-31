@@ -1,6 +1,7 @@
-/vendor
-/.idea
-Homestead.json
-Homestead.yaml
-.env
-.phpunit.result.cache
+/nbproject/
+/.idea/*
+*.tmlanguage.cache
+*.tmPreferences.cache
+*.stTheme.cache
+*.sublime-workspace
+*.sublime-project
