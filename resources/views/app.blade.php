@@ -90,6 +90,12 @@
         </div>
       </div>
     </div>
+
+    <div class="row mt-3">
+      <div class="col">
+        <div id="petaku" style="width:100%; height:50vh"></div>
+      </div>
+    </div>
     <p class="mt-5"><span class="h1">3 Days Weather</span> - <span class="location">-</span></p>
     <p>as of <span class="time">-</span></p>
     <div class="row">
@@ -115,40 +121,9 @@
     $(function(){
             let baseurl = "{{ url('') }}/"
             let weather_key = "{{ getenv('WEATHER_API_KEY') }}"
-
-            $("#btn-search").on("click",function(){
-                event.preventDefault()
-
-                let search = $("#search-input").val()
-
-                if(search != ""){
-                    $.ajax({
-                        url:"https://pokeapi.co/api/v2/pokemon/" + search,
-                        method:"get",
-                        dataType:"json",
-                        error:function(err){
-                            if(err.responseText == "Not Found"){
-                                Swal.fire({
-                                    title: search + ' Not Found!',
-                                    text:  'Check your keyword!',
-                                    icon: 'warning',
-                                    })
-                            }else{
-                                console.log(err);
-                            }
-                        },success:function(res){
-                            console.log(res);
-                            window.location = baseurl + "detail/" + res.id
-                        }
-                    })
-                }else{
-                    Swal.fire({
-                        title: 'Warning!',
-                        text:  'Enter pokemon name!',
-                        icon: 'warning',
-                        })
-                }
-            })
+            let map
+            let marker
+            let oldMarker
 
             $("#search").select2({
               width:"20rem",
@@ -185,9 +160,10 @@
               // console.log(e);
               let latlong = e.params.data.id.split(",")
               getLocation(latlong[0],latlong[1])
+              addMarker(latlong[0],latlong[1])
+              map.setCenter(marker.getPosition())
             })
-
-            getLocation()
+          
 
             
             function getLocation(latitude="",longitude=""){
@@ -195,8 +171,8 @@
               (position) => {
                 let lati= (latitude!=""?latitude:position.coords.latitude)
                 let longi= (longitude!=""?longitude:position.coords.longitude)
-                console.log("lati = "+lati);
-                console.log("longi = "+longi);
+                // console.log("lati = "+lati);
+                // console.log("longi = "+longi);
 
                 $.ajax({
                   url:"http://api.weatherapi.com/v1/forecast.json",
@@ -209,7 +185,7 @@
                     hour:new Date().getHours()
                   },error:function(err){console.log(err);},
                   success:function(res){
-                    console.log(res);
+                    // console.log(res);
                     let location = $(".location")
                     let time = $(".time")
                     let temperature = $("#temperature")
@@ -239,9 +215,55 @@
               }
             );
             }
+            getLocation()  
+
+            function mapsInit() {
+              navigator.geolocation.getCurrentPosition(
+              (position) => {
+                let lati= position.coords.latitude
+                let longi= position.coords.longitude
+                let center = new google.maps.LatLng(lati, longi);
+                let petaoption = {
+                    zoom: 16,
+                    center: center,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                };
+                map = new google.maps.Map(document.getElementById("petaku"), petaoption);
+                addMarker(lati,longi, baseurl + "assets/maps-marker.png");
+
+                google.maps.event.addListener(map, 'click', function(event) {
+                    addMarker(event.latLng.lat(),event.latLng.lng());
+                });
+              })                
+            }
+            mapsInit()
+
+            function addMarker(lati,longi, img = baseurl + "assets/maps-marker.png") {
+            if(oldMarker){
+              oldMarker.setMap(null)
+            }
+
+            let icon = {
+                url: img, // url
+                scaledSize: new google.maps.Size(50, 50), // scaled size
+                origin: new google.maps.Point(0, 0), // origin
+                anchor: new google.maps.Point(30, 60), // anchor
+            };
+
+            marker = new google.maps.Marker({
+                position: new google.maps.LatLng(lati, longi),
+                map: map,
+                icon: icon,
+                draggable:true
+            });
+
+            oldMarker = marker
+            getLocation(lati,longi)
+            }
         })
   </script>
   <script src="https://maps.googleapis.com/maps/api/js?key={{ getenv('GOOGLE_API_KEY') }}" async></script>
+
 
 </body>
 
