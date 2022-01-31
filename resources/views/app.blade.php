@@ -80,6 +80,9 @@
                 id="temperature">-</span>&deg;C</span>
             <img src="" alt="weather" class="float-right" style="height: 8rem" id="weather-icon">
             <h6 class="card-subtitle mb-2 text-white" id="condition">-</h6>
+            <p class="text-white"><i class="fas fa-wind"></i> <span id="wind">-</span></p>
+            <p class="text-white"><i class="fas fa-water"></i> <span id="humidity">-</span></p>
+            <p class="text-white"><i class="fas fa-cloud-rain"></i> <span id="rain">-</span></p>
           </div>
         </div>
       </div>
@@ -117,8 +120,7 @@
             let map,marker,oldMarker
 
             
-            mapsInit()
-            getLocation()         
+            mapsInit()       
 
             function getLocation(latitude="",longitude="",placeName=""){
               navigator.geolocation.getCurrentPosition(
@@ -139,12 +141,15 @@
                     hour:new Date().getHours()
                   },error:function(err){console.log(err);},
                   success:function(res){
-                    // console.log(res);
+                    console.log(res);
                     let location = $(".location")
                     let time = $(".time")
                     let temperature = $("#temperature")
                     let icon = $("#weather-icon")
                     let condition = $("#condition")
+                    let wind = $("#wind")
+                    let humidity = $("#humidity")
+                    let rain = $("#rain")
 
                     if(placeName==""){
                       location.html(res.location.name+", "+res.location.region+", "+res.location.country)
@@ -155,6 +160,9 @@
                     temperature.html(res.current.temp_c)
                     icon.attr("src",res.current.condition.icon)
                     condition.html(res.current.condition.text)
+                    wind.html(res.current.wind_kph + "kph, " + res.current.wind_dir)
+                    humidity.html(res.current.humidity + "%")
+                    rain.html(res.forecast.forecastday[0].hour[0].chance_of_rain + "%")
 
                     let output = ``
                     $.each(res.forecast.forecastday,function(key,value){
@@ -164,6 +172,9 @@
                         <td class="align-middle">`+date+`</td>
                         <td class="align-middle"><img src="`+value.hour[0].condition.icon+`" alt="weather"><span>`+value.hour[0].condition.text+`</span></td>
                         <td class="align-middle">`+value.hour[0].temp_c+`&deg;C</td>
+                        <td class="align-middle"><i class="fas fa-wind text-info"></i> ` + value.hour[0].wind_kph + `kph, `+ value.hour[0].wind_dir  +`</td>
+                        <td class="align-middle"><i class="fas fa-water text-info"></i> ` + value.hour[0].humidity + `%</td>
+                        <td class="align-middle"><i class="fas fa-cloud-rain text-info"></i> ` + value.hour[0].chance_of_rain + `%</td>
                       </tr>
                       `
                     })
